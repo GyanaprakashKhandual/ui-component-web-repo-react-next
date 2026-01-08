@@ -1,5 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AlertContainer } from "./ui/utils/Alert.util";
+import { MdAlignVerticalBottom } from "react-icons/md";
+import { ConfirmProvider } from "./scripts/Confirm.context";
+import { ContentTooltipProvider } from "./scripts/Content.context";
+import { DateTimeProvider } from "./scripts/Date.context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,7 +27,11 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ConfirmProvider>
+          {children}
+          <AlertContainer />
+        </ConfirmProvider>
+        <DateTimeProvider/>
       </body>
     </html>
   );
