@@ -5,6 +5,9 @@ import { MdAlignVerticalBottom } from "react-icons/md";
 import { ConfirmProvider } from "./scripts/Confirm.context";
 import { ContentTooltipProvider } from "./scripts/Content.context";
 import { DateTimeProvider } from "./scripts/Date.context";
+import { ActionMenuProvider } from "./scripts/Action.context";
+import { ActionMenu, ActionMenuWrapper } from "./ui/utils/Action.util";
+import { TextEditorProvider } from "./scripts/Text.context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,11 +30,16 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <TextEditorProvider>
+        <ActionMenuProvider>
         <ConfirmProvider>
           {children}
+          <ActionMenu/>
           <AlertContainer />
         </ConfirmProvider>
+        </ActionMenuProvider>
         <DateTimeProvider/>
+        </TextEditorProvider>
       </body>
     </html>
   );

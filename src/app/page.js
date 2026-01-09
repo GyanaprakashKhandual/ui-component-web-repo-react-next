@@ -1,10 +1,14 @@
-import DateDemo from "./ui/assets/test";
-import Demo from "./ui/assets/test";
+'use client'
+import DemoPage from "./ui/assets/test";
+import ExamplePage from "./ui/assets/test";
+import { ActionMenuProvider } from "./scripts/Action.context";
 
 export default function Home() {
   return(
-    <div>
-      <DateDemo/>
-    </div>
+    <ActionMenuProvider>
+      <div>
+       <DemoPage/>
+      </div>
+    </ActionMenuProvider>
   )
 }

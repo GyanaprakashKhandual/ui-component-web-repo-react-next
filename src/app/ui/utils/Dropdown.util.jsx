@@ -1,97 +1,211 @@
 'use client'
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, X, Search, Check } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 
+// Arrow Icons
+const GoogleArrowDown = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+    <path d="M5 7l5 5 5-5z" fill="currentColor" />
+  </svg>
+);
+
+// Utility: Get option value
+const getValue = (option) => {
+  if (typeof option === 'string') return option;
+  return option?.value ?? option;
+};
+
+// Utility: Get option label
+const getLabel = (option) => {
+  if (typeof option === 'string') return option;
+  return option?.label ?? option;
+};
+
+// Utility: Check if selected
+const isSelected = (option, selected, multi) => {
+  const val = getValue(option);
+  if (multi) {
+    return Array.isArray(selected) && selected.some(s => getValue(s) === val);
+  }
+  return getValue(selected) === val;
+};
+
+// Utility: Filter options
+const filterOptions = (options, query) => {
+  if (!query.trim()) return options;
+  const lower = query.toLowerCase();
+  return options.filter(opt => getLabel(opt).toLowerCase().includes(lower));
+};
+
+// Auto-position calculator
+const useAutoPosition = (triggerRef, menuRef, isOpen, preferredPosition = 'bottom') => {
+  const [position, setPosition] = useState(preferredPosition);
+
+  useEffect(() => {
+    if (!isOpen || !triggerRef.current || !menuRef.current) return;
+
+    const calculate = () => {
+      const trigger = triggerRef.current.getBoundingClientRect();
+      const menu = menuRef.current.getBoundingClientRect();
+      const viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+
+      const spaceBelow = viewport.height - trigger.bottom;
+      const spaceAbove = trigger.top;
+      const menuHeight = menu.height || 300;
+
+      let newPos = preferredPosition;
+
+      if (preferredPosition === 'bottom' && spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        newPos = 'top';
+      } else if (preferredPosition === 'top' && spaceAbove < menuHeight && spaceBelow > spaceAbove) {
+        newPos = 'bottom';
+      }
+
+      setPosition(newPos);
+    };
+
+    calculate();
+    window.addEventListener('resize', calculate);
+    window.addEventListener('scroll', calculate, true);
+
+    return () => {
+      window.removeEventListener('resize', calculate);
+      window.removeEventListener('scroll', calculate, true);
+    };
+  }, [isOpen, preferredPosition, triggerRef, menuRef]);
+
+  return position;
+};
+
+// Main Dropdown Component
 const Dropdown = ({
   options = [],
-  value = [],
+  value = null,
   onChange = () => {},
   placeholder = 'Select option',
-  mode = 'single', // 'single' or 'multi'
-  searchable = true,
-  clearable = true,
+  mode = 'single',
+  searchable = false,
+  clearable = false,
   disabled = false,
-  maxHeight = 300,
+  maxHeight = 320,
   className = '',
+  dropdownClassName = '',
+  optionClassName = '',
   label = '',
-  helperText = '',
+  error = '',
   required = false,
-  position = 'bottom'
+  position = 'bottom',
+  theme = 'light',
+  showDot = true,
+  dotColor = 'blue',
+  size = 'md'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [calculatedPosition, setCalculatedPosition] = useState(position);
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  
-  const containerRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const searchInputRef = useRef(null);
-  const optionsContainerRef = useRef(null);
+  const [search, setSearch] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
-  const selectedValue = mode === 'single' ? (Array.isArray(value) ? value[0] : value) : (Array.isArray(value) ? value : []);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const searchRef = useRef(null);
+  const optionsRef = useRef(null);
 
-  // Filter options based on search
-  const filteredOptions = options.filter(opt => {
-    const optLabel = typeof opt === 'string' ? opt : opt.label || opt;
-    return String(optLabel).toLowerCase().includes(searchText.toLowerCase());
-  });
+  const calculatedPosition = useAutoPosition(triggerRef, menuRef, isOpen, position);
+  const filtered = filterOptions(options, search);
 
-  // Auto-positioning logic (same as DateTimePicker & ActionMenu)
+  const isMulti = mode === 'multi';
+  const selected = isMulti ? (Array.isArray(value) ? value : []) : value;
+
+  // Theme classes
+  const isDark = theme === 'dark';
+  const themeClasses = {
+    trigger: isDark
+      ? 'bg-gray-800 border-gray-700 text-gray-100 hover:border-gray-600'
+      : 'bg-white border-gray-300 text-gray-900 hover:border-gray-400',
+    triggerFocus: isDark
+      ? 'border-blue-500 ring-blue-500/20'
+      : 'border-blue-500 ring-blue-500/20',
+    menu: isDark
+      ? 'bg-gray-800 border-gray-700'
+      : 'bg-white border-gray-200',
+    search: isDark
+      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500',
+    option: isDark
+      ? 'text-gray-100 hover:bg-gray-700'
+      : 'text-gray-900 hover:bg-gray-50',
+    optionSelected: isDark
+      ? 'bg-gray-700 text-blue-400'
+      : 'bg-blue-50 text-blue-600',
+    chip: isDark
+      ? 'bg-gray-700 text-gray-200'
+      : 'bg-gray-100 text-gray-700',
+    label: isDark ? 'text-gray-200' : 'text-gray-700',
+    error: 'text-red-500',
+    placeholder: isDark ? 'text-gray-500' : 'text-gray-500'
+  };
+
+  // Size classes
+  const sizeClasses = {
+    sm: { trigger: 'px-3 py-1.5 text-sm', option: 'px-3 py-2 text-sm', chip: 'px-2 py-0.5 text-xs' },
+    md: { trigger: 'px-4 py-2.5 text-sm', option: 'px-4 py-2.5 text-sm', chip: 'px-2.5 py-1 text-sm' },
+    lg: { trigger: 'px-5 py-3 text-base', option: 'px-5 py-3 text-base', chip: 'px-3 py-1.5 text-sm' }
+  };
+
+  const currentSize = sizeClasses[size] || sizeClasses.md;
+
+  // Auto-focus search
   useEffect(() => {
-    if (isOpen && containerRef.current && dropdownRef.current) {
-      const trigger = containerRef.current.getBoundingClientRect();
-      const dropdown = dropdownRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-
-      const spaceBelow = viewportHeight - trigger.bottom;
-      const spaceAbove = trigger.top;
-      const spaceRight = viewportWidth - trigger.right;
-      const spaceLeft = trigger.left;
-
-      let newPosition = position;
-
-      // Vertical positioning
-      if (position === 'top' || position === 'top-left' || position === 'top-right') {
-        if (spaceAbove < 60 && spaceBelow > spaceAbove) {
-          newPosition = position === 'top' ? 'bottom' : position === 'top-left' ? 'bottom-left' : 'bottom-right';
-        }
-      } else if (position === 'bottom' || position === 'bottom-left' || position === 'bottom-right') {
-        if (spaceBelow < 60 && spaceAbove > spaceBelow) {
-          newPosition = position === 'bottom' ? 'top' : position === 'bottom-left' ? 'top-left' : position === 'bottom-right' ? 'top-right' : 'top';
-        }
-      }
-
-      // Horizontal positioning
-      if (newPosition.includes('left')) {
-        if (spaceLeft < dropdown.width && spaceRight > spaceLeft) {
-          newPosition = newPosition.replace('left', 'right');
-        }
-      } else if (newPosition.includes('right')) {
-        if (spaceRight < dropdown.width && spaceLeft > spaceRight) {
-          newPosition = newPosition.replace('right', 'left');
-        }
-      }
-
-      setCalculatedPosition(newPosition);
-    }
-  }, [isOpen, position]);
-
-  // Auto-focus search input when dropdown opens
-  useEffect(() => {
-    if (isOpen && searchable && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+    if (isOpen && searchable && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 100);
     }
   }, [isOpen, searchable]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = (e) => {
+  // Scroll focused option into view
+  useEffect(() => {
+    if (focusedIndex >= 0 && optionsRef.current) {
+      const options = optionsRef.current.children;
+      if (options[focusedIndex]) {
+        options[focusedIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [focusedIndex]);
+
+  // Handle selection
+  const handleSelect = useCallback((option) => {
+    if (isMulti) {
+      const val = getValue(option);
+      const isCurrentlySelected = selected.some(s => getValue(s) === val);
+      const newValue = isCurrentlySelected
+        ? selected.filter(s => getValue(s) !== val)
+        : [...selected, option];
+      onChange(newValue);
+    } else {
+      onChange(option);
+      setIsOpen(false);
+      setSearch('');
+    }
+  }, [isMulti, selected, onChange]);
+
+  // Handle clear
+  const handleClear = useCallback((e) => {
+    e.stopPropagation();
+    onChange(isMulti ? [] : null);
+    setSearch('');
+  }, [isMulti, onChange]);
+
+  // Handle keyboard
+  const handleKeyDown = useCallback((e) => {
+    if (disabled) return;
+
     if (!isOpen) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      if (['Enter', ' ', 'ArrowDown'].includes(e.key)) {
         e.preventDefault();
         setIsOpen(true);
-        setHighlightedIndex(0);
+        setFocusedIndex(0);
       }
       return;
     }
@@ -99,259 +213,240 @@ const Dropdown = ({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex((prev) => 
-          prev < filteredOptions.length - 1 ? prev + 1 : prev
-        );
+        setFocusedIndex(prev => Math.min(prev + 1, filtered.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
         break;
       case 'Enter':
         e.preventDefault();
-        if (filteredOptions[highlightedIndex]) {
-          handleSelectOption(filteredOptions[highlightedIndex]);
+        if (focusedIndex >= 0 && filtered[focusedIndex]) {
+          handleSelect(filtered[focusedIndex]);
         }
         break;
       case 'Escape':
         e.preventDefault();
         setIsOpen(false);
-        setSearchText('');
+        setSearch('');
+        triggerRef.current?.focus();
         break;
       case 'Tab':
         setIsOpen(false);
-        setSearchText('');
-        break;
-      default:
+        setSearch('');
         break;
     }
-  };
+  }, [isOpen, filtered, focusedIndex, handleSelect, disabled]);
 
-  // Handle option selection
-  const handleSelectOption = (option) => {
-    if (mode === 'single') {
-      onChange(option);
-      setIsOpen(false);
-      setSearchText('');
-    } else {
-      const optionValue = typeof option === 'string' ? option : option.value || option;
-      const newValue = Array.isArray(selectedValue) ? [...selectedValue] : [];
-      
-      if (newValue.some(v => (typeof v === 'string' ? v : v.value || v) === optionValue)) {
-        const filtered = newValue.filter(v => (typeof v === 'string' ? v : v.value || v) !== optionValue);
-        onChange(filtered);
-      } else {
-        onChange([...newValue, option]);
-      }
-    }
-  };
-
-  // Handle clear
-  const handleClear = (e) => {
-    e.stopPropagation();
-    onChange(mode === 'single' ? null : []);
-    setSearchText('');
-  };
-
-  // Handle click outside
+  // Click outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+    if (!isOpen) return;
+
+    const handleClick = (e) => {
+      if (triggerRef.current && !triggerRef.current.contains(e.target) &&
+          menuRef.current && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
-        setSearchText('');
+        setSearch('');
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
-  // Check if option is selected
-  const isOptionSelected = (option) => {
-    const optionValue = typeof option === 'string' ? option : option.value || option;
-    if (mode === 'single') {
-      return selectedValue === optionValue;
-    } else {
-      return Array.isArray(selectedValue) && 
-        selectedValue.some(v => (typeof v === 'string' ? v : v.value || v) === optionValue);
-    }
-  };
-
-  // Get display text
+  // Display text
   const getDisplayText = () => {
-    if (mode === 'single') {
-      if (!selectedValue) return placeholder;
-      return typeof selectedValue === 'string' ? selectedValue : selectedValue.label || selectedValue;
-    } else {
-      if (!Array.isArray(selectedValue) || selectedValue.length === 0) return placeholder;
-      return `${selectedValue.length} selected`;
+    if (isMulti) {
+      return Array.isArray(selected) && selected.length > 0
+        ? `${selected.length} selected`
+        : placeholder;
     }
+    return selected ? getLabel(selected) : placeholder;
   };
 
-  const positionClasses = {
-    top: 'bottom-full mb-2 left-0 right-0',
-    bottom: 'top-full mt-2 left-0 right-0',
-    'top-left': 'bottom-full mb-2 right-0',
-    'top-right': 'bottom-full mb-2 left-0',
-    'bottom-left': 'top-full mt-2 right-0',
-    'bottom-right': 'top-full mt-2 left-0',
-  };
+  const hasValue = isMulti ? (Array.isArray(selected) && selected.length > 0) : selected !== null;
 
   return (
-    <div ref={containerRef} className={`relative w-full ${className}`}>
+    <div className={`relative w-full ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-900 mb-2">
+        <label className={`block text-sm font-medium mb-1.5 ${themeClasses.label}`}>
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
 
-      {/* Dropdown Trigger */}
-      <motion.div
+      {/* Trigger */}
+      <div
+        ref={triggerRef}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        tabIndex={disabled ? -1 : 0}
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
         className={`
-          flex items-center justify-between px-4 py-3
-          bg-white border border-gray-300 rounded-lg cursor-pointer
-          transition-all
-          ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'hover:border-gray-400'}
-          ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : ''}
+          flex items-center justify-between rounded-lg border transition-all cursor-pointer
+          ${currentSize.trigger}
+          ${themeClasses.trigger}
+          ${isOpen ? `ring-2 ${themeClasses.triggerFocus}` : ''}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${error ? 'border-red-500' : ''}
         `}
       >
-        <div className="flex items-center gap-2 flex-1 flex-wrap">
-          {mode === 'multi' && Array.isArray(selectedValue) && selectedValue.length > 0 ? (
-            selectedValue.map((item, idx) => {
-              const label = typeof item === 'string' ? item : item.label || item;
-              return (
-                <motion.span
-                  key={idx}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center gap-2"
+        <div className="flex items-center gap-2 flex-1 flex-wrap min-w-0">
+          {isMulti && Array.isArray(selected) && selected.length > 0 ? (
+            selected.map((item, idx) => (
+              <motion.span
+                key={idx}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                className={`
+                  inline-flex items-center gap-1.5 rounded-md font-medium
+                  ${currentSize.chip} ${themeClasses.chip}
+                `}
+              >
+                {getLabel(item)}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelect(item);
+                  }}
+                  className="hover:opacity-70 transition-opacity"
+                  aria-label="Remove"
                 >
-                  {label}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectOption(item);
-                    }}
-                    className="hover:text-blue-900"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </motion.span>
-              );
-            })
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.span>
+            ))
           ) : (
-            <span className={selectedValue ? 'text-gray-900' : 'text-gray-500'}>
+            <span className={hasValue ? '' : themeClasses.placeholder}>
               {getDisplayText()}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2 ml-2">
-          {(mode === 'single' ? selectedValue : Array.isArray(selectedValue) && selectedValue.length > 0) && 
-            clearable && !disabled && (
+        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+          {clearable && hasValue && !disabled && (
             <motion.button
               whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handleClear}
-              className="p-1 hover:bg-gray-200 rounded transition-colors"
+              className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              aria-label="Clear"
             >
-              <X className="w-4 h-4 text-gray-600" />
+              <X className="w-4 h-4 opacity-60" />
             </motion.button>
           )}
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="opacity-60"
           >
-            <ChevronDown className="w-5 h-5 text-gray-600" />
+            <GoogleArrowDown />
           </motion.div>
         </div>
-      </motion.div>
+      </div>
 
-      {helperText && (
-        <p className="text-xs text-gray-600 mt-1">{helperText}</p>
-      )}
+      {error && <p className={`text-xs mt-1 ${themeClasses.error}`}>{error}</p>}
 
       {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            ref={dropdownRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
+            ref={menuRef}
+            initial={{ opacity: 0, scale: 0.95, y: calculatedPosition === 'top' ? 10 : -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: calculatedPosition === 'top' ? 10 : -10 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
             className={`
-              absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200
-              ${positionClasses[calculatedPosition] || positionClasses.bottom}
-              w-full
+              absolute z-50 rounded-lg border shadow-xl
+              ${calculatedPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
+              w-full min-w-[200px]
+              ${themeClasses.menu}
+              ${dropdownClassName}
             `}
-            onKeyDown={handleKeyDown}
           >
-            {/* Search Input */}
             {searchable && (
-              <div className="p-3 border-b border-gray-200">
+              <div className="p-2 border-b border-inherit">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
                   <input
-                    ref={searchInputRef}
+                    ref={searchRef}
                     type="text"
-                    placeholder="Search options..."
-                    value={searchText}
+                    placeholder="Search..."
+                    value={search}
                     onChange={(e) => {
-                      setSearchText(e.target.value);
-                      setHighlightedIndex(0);
+                      setSearch(e.target.value);
+                      setFocusedIndex(0);
                     }}
                     onKeyDown={handleKeyDown}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`
+                      w-full pl-9 pr-3 py-2 rounded-md border text-sm
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                      ${themeClasses.search}
+                    `}
                   />
                 </div>
               </div>
             )}
 
-            {/* Options List */}
             <div
-              ref={optionsContainerRef}
-              className="overflow-y-auto"
+              ref={optionsRef}
+              role="listbox"
+              className="overflow-y-auto py-1"
               style={{ maxHeight: `${maxHeight}px` }}
             >
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((option, idx) => {
-                  const optLabel = typeof option === 'string' ? option : option.label || option;
-                  const isSelected = isOptionSelected(option);
-                  const isHighlighted = idx === highlightedIndex;
+              {filtered.length > 0 ? (
+                filtered.map((option, idx) => {
+                  const optSelected = isSelected(option, selected, isMulti);
+                  const isFocused = idx === focusedIndex;
+                  const dotColorClass = {
+                    blue: 'bg-blue-500',
+                    green: 'bg-green-500',
+                    red: 'bg-red-500',
+                    purple: 'bg-purple-500',
+                    orange: 'bg-orange-500',
+                    gray: 'bg-gray-500'
+                  }[dotColor] || 'bg-blue-500';
 
                   return (
-                    <motion.button
+                    <motion.div
                       key={idx}
-                      onClick={() => handleSelectOption(option)}
-                      onMouseEnter={() => setHighlightedIndex(idx)}
-                      whileHover={{ backgroundColor: '#f3f4f6' }}
+                      role="option"
+                      aria-selected={optSelected}
+                      onClick={() => handleSelect(option)}
+                      onMouseEnter={() => setFocusedIndex(idx)}
+                      whileHover={{ x: 2 }}
                       className={`
-                        w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors
-                        ${isHighlighted ? 'bg-blue-50' : ''}
-                        ${isSelected ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-900'}
+                        flex items-center gap-3 cursor-pointer transition-colors
+                        ${currentSize.option}
+                        ${isFocused ? (isDark ? 'bg-gray-700' : 'bg-gray-100') : ''}
+                        ${optSelected ? themeClasses.optionSelected : themeClasses.option}
+                        ${optionClassName}
                       `}
                     >
-                      <div className={`
-                        w-5 h-5 rounded border-2 flex items-center justify-center transition-all
-                        ${isSelected 
-                          ? 'bg-blue-600 border-blue-600' 
-                          : 'border-gray-300 hover:border-blue-500'
-                        }
-                      `}>
-                        {isSelected && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                      <span className="flex-1">{optLabel}</span>
-                    </motion.button>
+                      {showDot && (
+                        <div className="flex-shrink-0">
+                          {optSelected ? (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className={`w-2 h-2 rounded-full ${dotColorClass}`}
+                            />
+                          ) : (
+                            <div className="w-2 h-2" />
+                          )}
+                        </div>
+                      )}
+                      <span className="flex-1 truncate font-medium">
+                        {getLabel(option)}
+                      </span>
+                    </motion.div>
                   );
                 })
               ) : (
-                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                <div className={`${currentSize.option} text-center opacity-50`}>
                   No options found
                 </div>
               )}
@@ -363,266 +458,116 @@ const Dropdown = ({
   );
 };
 
-const Demo = () => {
-  const [singleValue, setSingleValue] = useState(null);
-  const [multiValue, setMultiValue] = useState([]);
-  const [singleValue2, setSingleValue2] = useState(null);
-  const [multiValue2, setMultiValue2] = useState([]);
-  const [singleValue3, setSingleValue3] = useState(null);
-  const [multiValue3, setMultiValue3] = useState([]);
+// Demo
+export default function Demo() {
+  const [single, setSingle] = useState(null);
+  const [multi, setMulti] = useState([]);
+  const [theme, setTheme] = useState('light');
 
-  const basicOptions = [
+  const options = [
     'JavaScript',
-    'Python',
-    'React',
-    'Vue',
-    'Angular',
-    'Node.js',
     'TypeScript',
+    'Python',
     'Java',
     'C++',
-    'Go'
-  ];
-
-  const countryOptions = [
-    { label: 'United States', value: 'us' },
-    { label: 'United Kingdom', value: 'uk' },
-    { label: 'Canada', value: 'ca' },
-    { label: 'Australia', value: 'au' },
-    { label: 'Germany', value: 'de' },
-    { label: 'France', value: 'fr' },
-    { label: 'Japan', value: 'jp' },
-    { label: 'India', value: 'in' },
-    { label: 'Brazil', value: 'br' },
-    { label: 'Mexico', value: 'mx' }
-  ];
-
-  const statusOptions = [
-    'Active',
-    'Inactive',
-    'Pending',
-    'Archived',
-    'Deleted',
-    'Suspended',
-    'On Hold',
-    'Waiting'
+    'Ruby',
+    'Go',
+    'Rust',
+    'Swift',
+    'Kotlin'
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-      <div className="max-w-7xl mx-auto space-y-12">
-        {/* Header */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Smart Dropdown Select</h1>
-          <p className="text-gray-600 text-lg">Single & Multi-Select with Search, Auto-Positioning & Full Keyboard Navigation</p>
+    <div className={`min-h-screen p-8 ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Modern Dropdown Component
+          </h1>
+          <button
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors
+              ${theme === 'dark' 
+                ? 'bg-gray-800 text-white hover:bg-gray-700' 
+                : 'bg-white text-gray-900 hover:bg-gray-100'
+              }`}
+          >
+            Toggle {theme === 'light' ? 'Dark' : 'Light'}
+          </button>
         </div>
 
-        {/* Single Select Examples */}
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Single Select Dropdown</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <Dropdown
-                label="Programming Language"
-                options={basicOptions}
-                value={singleValue}
-                onChange={setSingleValue}
-                placeholder="Select a language"
-                mode="single"
-                searchable={true}
-                required={true}
-                helperText="Choose your preferred programming language"
-              />
-              <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
-                <p className="text-gray-600"><span className="font-semibold">Selected:</span> {singleValue || 'None'}</p>
-              </div>
-            </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <Dropdown
+              label="Single Select"
+              placeholder="Choose a language"
+              options={options}
+              value={single}
+              onChange={setSingle}
+              searchable
+              clearable
+              theme={theme}
+              size="md"
+            />
+          </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <Dropdown
-                label="Country"
-                options={countryOptions}
-                value={singleValue2}
-                onChange={setSingleValue2}
-                placeholder="Select a country"
-                mode="single"
-                searchable={true}
-                helperText="Search and select your country"
-              />
-              <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
-                <p className="text-gray-600">
-                  <span className="font-semibold">Selected:</span> {
-                    singleValue2 ? (typeof singleValue2 === 'string' ? singleValue2 : singleValue2.label) : 'None'
-                  }
-                </p>
-              </div>
-            </div>
+          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <Dropdown
+              label="Multi Select"
+              placeholder="Choose languages"
+              options={options}
+              value={multi}
+              onChange={setMulti}
+              mode="multi"
+              searchable
+              clearable
+              theme={theme}
+              dotColor="green"
+            />
+          </div>
+
+          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <Dropdown
+              label="With Error"
+              placeholder="Select option"
+              options={options}
+              value={null}
+              onChange={() => {}}
+              error="This field is required"
+              required
+              theme={theme}
+            />
+          </div>
+
+          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <Dropdown
+              label="Disabled"
+              placeholder="Cannot select"
+              options={options}
+              value={null}
+              onChange={() => {}}
+              disabled
+              theme={theme}
+            />
           </div>
         </div>
 
-        {/* Multi Select Examples */}
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Multi-Select Dropdown</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <Dropdown
-                label="Skills"
-                options={basicOptions}
-                value={multiValue}
-                onChange={setMultiValue}
-                placeholder="Select skills"
-                mode="multi"
-                searchable={true}
-                helperText="Select one or more skills"
-              />
-              <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
-                <p className="text-gray-600"><span className="font-semibold">Selected ({multiValue.length}):</span></p>
-                <p className="text-gray-600 mt-1">{multiValue.length > 0 ? multiValue.join(', ') : 'None'}</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <Dropdown
-                label="Countries"
-                options={countryOptions}
-                value={multiValue2}
-                onChange={setMultiValue2}
-                placeholder="Select countries"
-                mode="multi"
-                searchable={true}
-                helperText="Select multiple countries"
-              />
-              <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
-                <p className="text-gray-600"><span className="font-semibold">Selected ({multiValue2.length}):</span></p>
-                <p className="text-gray-600 mt-1">
-                  {multiValue2.length > 0 
-                    ? multiValue2.map(v => typeof v === 'string' ? v : v.label).join(', ')
-                    : 'None'
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Edge Cases */}
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Edge Cases & Positioning</h2>
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">Top Position - Auto-Repositions on Bottom if Space Low</h3>
-              <Dropdown
-                label="Status (Top Position)"
-                options={statusOptions}
-                value={singleValue3}
-                onChange={setSingleValue3}
-                placeholder="Select status"
-                mode="single"
-                searchable={true}
-                position="top"
-                helperText="Opens upward but repositions downward if needed"
-              />
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">Multi-Select with Many Options</h3>
-              <Dropdown
-                label="Select Multiple"
-                options={multiValue3.length > 0 ? statusOptions : ['Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Option 7', 'Option 8']}
-                value={multiValue3}
-                onChange={setMultiValue3}
-                placeholder="Select multiple items"
-                mode="multi"
-                searchable={true}
-                maxHeight={250}
-                helperText="Scroll to see all options, select as many as needed"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Keyboard Navigation Guide */}
-        <div className="bg-blue-50 rounded-xl p-8 border border-blue-200 shadow-sm">
-          <h2 className="text-xl font-semibold text-blue-900 mb-4">⌨️ Keyboard Navigation Guide</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-blue-800">
-            <div>
-              <p className="font-semibold mb-3">When Dropdown is Closed:</p>
-              <ul className="space-y-2">
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Enter</kbd> - Open dropdown</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Space</kbd> - Open dropdown</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">↓</kbd> - Open & highlight first option</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold mb-3">When Dropdown is Open:</p>
-              <ul className="space-y-2">
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">↓</kbd> - Navigate down</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">↑</kbd> - Navigate up</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Enter</kbd> - Select highlighted option</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Esc</kbd> - Close dropdown</li>
-                <li><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Tab</kbd> - Close dropdown</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Single & Multi-Select modes</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Smart auto-positioning with viewport detection</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Search with instant filtering</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Auto-focus search input on open</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Full keyboard navigation (Arrow keys, Enter, Esc)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Highlighted keyboard selection</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Multi-select with removable tags</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Clear button for reset</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Customizable options (string or object)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Click outside to close</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Smooth animations</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-600 font-bold">✓</span>
-              <span className="text-gray-700">Fully responsive design</span>
-            </div>
-          </div>
+        <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <h2 className={`text-xl font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Features
+          </h2>
+          <ul className={`space-y-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+            <li>✓ Single & Multi-select modes</li>
+            <li>✓ Searchable with keyboard navigation</li>
+            <li>✓ Auto-positioning (top/bottom)</li>
+            <li>✓ Dark theme support</li>
+            <li>✓ Smooth Framer Motion animations</li>
+            <li>✓ GitHub-inspired design</li>
+            <li>✓ Fully customizable</li>
+            <li>✓ Accessible (ARIA attributes)</li>
+          </ul>
         </div>
       </div>
     </div>
   );
-};
-
-export default Demo;
+}
