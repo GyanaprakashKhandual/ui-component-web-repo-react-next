@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metronique Product Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 60px 20px;
+            text-align: center;
+            border-bottom: 3px solid #000;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            color: #333;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #000;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .filter-bar {
+            background: #f8f9fa;
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .filter-btn {
+            padding: 12px 24px;
+            border: 2px solid #000;
+            background: #fff;
+            color: #000;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .filter-btn:hover {
+            background: #000;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: #000;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .category-section {
+            margin-bottom: 80px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #000;
+        }
+
+        .category-icon {
+            font-size: 2.5rem;
+        }
+
+        .category-title {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .category-count {
+            font-size: 1rem;
+            color: #666;
+            margin-left: auto;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background: #ffffff;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            border-color: #000;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .product-number {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .product-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #000;
+        }
+
+        .product-description {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #000;
+            border-radius: 10px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        footer {
+            background: #000;
+            color: #fff;
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 80px;
+        }
+
+        footer p {
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                gap: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Metronique</h1>
+        <p>A comprehensive enterprise software ecosystem for modern businesses</p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">100</div>
+                <div class="stat-label">Products</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">∞</div>
+                <div class="stat-label">Possibilities</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filters">
+            <button class="filter-btn active" data-category="all">All Products</button>
+            <button class="filter-btn" data-category="project">📋 Project Management</button>
+            <button class="filter-btn" data-category="collaboration">💬 Collaboration</button>
+            <button class="filter-btn" data-category="development">💻 Development</button>
+            <button class="filter-btn" data-category="business">🏢 Business Ops</button>
+            <button class="filter-btn" data-category="analytics">📊 Analytics</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search products..." id="searchInput">
+        </div>
+
+        <div id="productsContainer"></div>
+    </div>
+
+    <footer>
+        <p><strong>Metronique Product Suite</strong></p>
+        <p>Version 1.0.0 | Last Updated: January 2026</p>
+        <p>For more information, visit: metronique.com</p>
+    </footer>
+
+    <script>
+        const products = [
+            { num: 1, name: "Tasks", desc: "Task management system with assignments, priorities, and deadline tracking", cat: "project" },
+            { num: 2, name: "Sprints", desc: "Agile sprint planning and execution with velocity tracking and retrospectives", cat: "project" },
+            { num: 3, name: "Phases", desc: "Project phase management with gate controls and milestone approvals", cat: "project" },
+            { num: 4, name: "Issues", desc: "Issue tracking and bug management with severity classification and workflows", cat: "project" },
+            { num: 5, name: "Projects", desc: "End-to-end project management with templates, timelines, and resource allocation", cat: "project" },
+            { num: 6, name: "Docs", desc: "Collaborative document creation and editing with real-time co-authoring", cat: "collaboration" },
+            { num: 7, name: "Sheets", desc: "Powerful spreadsheet application with formulas, charts, and data analysis", cat: "collaboration" },
+            { num: 8, name: "Meet", desc: "Video conferencing platform with screen sharing, recording, and breakout rooms", cat: "collaboration" },
+            { num: 9, name: "Chats", desc: "Team messaging and instant communication with channels and direct messages", cat: "collaboration" },
+            { num: 10, name: "Drive", desc: "Cloud storage and file management with sharing, versioning, and sync", cat: "collaboration" },
+            { num: 11, name: "Emails", desc: "Business email service with smart filtering, templates, and scheduling", cat: "collaboration" },
+            { num: 12, name: "Videos", desc: "Video hosting and streaming platform with analytics and engagement tracking", cat: "collaboration" },
+            { num: 13, name: "Notes", desc: "Quick note-taking app with tags, search, and cross-device synchronization", cat: "collaboration" },
+            { num: 14, name: "Milestones", desc: "Track and visualize critical project milestones and deliverables across timelines", cat: "project" },
+            { num: 15, name: "Roadmaps", desc: "Create strategic product roadmaps with timeline visualization and dependency mapping", cat: "project" },
+            { num: 16, name: "Gantt", desc: "Interactive Gantt chart builder for complex project scheduling and resource planning", cat: "project" },
+            { num: 17, name: "Kanban", desc: "Flexible kanban boards with WIP limits, swimlanes, and workflow automation", cat: "project" },
+            { num: 18, name: "Backlog", desc: "Prioritized backlog management with story points, epics, and grooming tools", cat: "project" },
+            { num: 19, name: "Reports", desc: "Automated report generation with customizable dashboards and analytics insights", cat: "project" },
+            { num: 20, name: "Portfolio", desc: "Multi-project portfolio management with resource allocation and strategic alignment", cat: "project" },
+            { num: 21, name: "Dependencies", desc: "Visualize and manage task dependencies, blockers, and critical path analysis", cat: "project" },
+            { num: 22, name: "Timesheet", desc: "Time tracking and timesheet management with billing and approval workflows", cat: "project" },
+            { num: 23, name: "Workload", desc: "Team capacity planning and workload balancing across projects and resources", cat: "project" },
+            { num: 24, name: "Budget", desc: "Project budget tracking, forecasting, and expense management with cost controls", cat: "project" },
+            { num: 25, name: "Risk", desc: "Risk assessment, mitigation planning, and issue escalation management", cat: "project" },
+            { num: 26, name: "Quality", desc: "Quality assurance tracking with test cases, defect management, and compliance", cat: "project" },
+            { num: 27, name: "Test", desc: "Automated testing platform with test case management and coverage tracking", cat: "project" },
+            { num: 28, name: "Debug", desc: "Debugging tools with error tracking, stack traces, and diagnostics", cat: "development" },
+            { num: 29, name: "Audit", desc: "Compliance auditing and regulatory tracking with evidence collection", cat: "project" },
+            { num: 30, name: "Standards", desc: "Standards and guidelines management with compliance checklists", cat: "project" },
+            { num: 31, name: "Wiki", desc: "Collaborative knowledge base and documentation platform with version control", cat: "collaboration" },
+            { num: 32, name: "Whiteboard", desc: "Infinite canvas for brainstorming, diagramming, and visual collaboration", cat: "collaboration" },
+            { num: 33, name: "Forms", desc: "Custom form builder with conditional logic, validations, and workflow integration", cat: "collaboration" },
+            { num: 34, name: "Surveys", desc: "Create surveys and collect feedback with analytics and response tracking", cat: "collaboration" },
+            { num: 35, name: "Polls", desc: "Quick team polls and voting for decision-making and consensus building", cat: "collaboration" },
+            { num: 36, name: "Announcements", desc: "Company-wide announcement system with scheduling and targeting options", cat: "collaboration" },
+            { num: 37, name: "Social", desc: "Internal social network for team updates, recognition, and community engagement", cat: "collaboration" },
+            { num: 38, name: "Events", desc: "Event calendar and scheduling with RSVP management and reminders", cat: "collaboration" },
+            { num: 39, name: "Bookings", desc: "Resource and meeting room booking system with availability management", cat: "collaboration" },
+            { num: 40, name: "Screen", desc: "Screen sharing and co-browsing for real-time collaboration and support", cat: "collaboration" },
+            { num: 41, name: "Voice", desc: "VoIP calling system with recording, transcription, and call analytics", cat: "collaboration" },
+            { num: 42, name: "Broadcast", desc: "Live streaming and webinar platform for company-wide communications", cat: "collaboration" },
+            { num: 43, name: "Feedback", desc: "360-degree feedback collection and performance review management", cat: "collaboration" },
+            { num: 44, name: "Ideas", desc: "Innovation management platform for collecting and voting on team ideas", cat: "collaboration" },
+            { num: 45, name: "Connect", desc: "Employee directory with org charts, profiles, and skill mapping", cat: "collaboration" },
+            { num: 46, name: "Translate", desc: "Real-time translation service for multilingual team communication", cat: "collaboration" },
+            { num: 47, name: "Captions", desc: "Automated closed captioning and transcription for meetings and videos", cat: "collaboration" },
+            { num: 48, name: "Channels", desc: "Topic-based communication channels with threading and notifications", cat: "collaboration" },
+            { num: 49, name: "Status", desc: "Team status updates and daily standup automation with integrations", cat: "collaboration" },
+            { num: 50, name: "Spaces", desc: "Virtual workspaces for teams with customizable layouts and widgets", cat: "collaboration" },
+            { num: 51, name: "Code", desc: "Code repository management with version control and collaboration features", cat: "development" },
+            { num: 52, name: "CI/CD", desc: "Continuous integration and deployment pipeline automation and monitoring", cat: "development" },
+            { num: 53, name: "API", desc: "API management platform with documentation, testing, and analytics", cat: "development" },
+            { num: 54, name: "Monitor", desc: "Application performance monitoring with alerts and incident management", cat: "development" },
+            { num: 55, name: "Logs", desc: "Centralized logging and log analysis with search and visualization tools", cat: "development" },
+            { num: 56, name: "Deploy", desc: "Deployment management with rollback capabilities and environment controls", cat: "development" },
+            { num: 57, name: "Sandbox", desc: "Isolated development environments for testing and experimentation", cat: "development" },
+            { num: 58, name: "Registry", desc: "Container and package registry with security scanning and versioning", cat: "development" },
+            { num: 59, name: "Build", desc: "Build automation and artifact management with dependency resolution", cat: "development" },
+            { num: 60, name: "Secrets", desc: "Secure secrets management with encryption and access controls", cat: "development" },
+            { num: 61, name: "Infrastructure", desc: "Infrastructure as code management with provisioning automation", cat: "development" },
+            { num: 62, name: "Database", desc: "Database management tools with backup, migration, and query optimization", cat: "development" },
+            { num: 63, name: "Cache", desc: "Distributed caching solution for application performance optimization", cat: "development" },
+            { num: 64, name: "Queue", desc: "Message queue and job processing system with retry mechanisms", cat: "development" },
+            { num: 65, name: "Gateway", desc: "API gateway with routing, rate limiting, and security features", cat: "development" },
+            { num: 66, name: "CRM", desc: "Customer relationship management with sales pipeline and contact tracking", cat: "business" },
+            { num: 67, name: "Invoices", desc: "Invoice generation, payment tracking, and billing automation", cat: "business" },
+            { num: 68, name: "Contracts", desc: "Contract lifecycle management with e-signatures and renewal tracking", cat: "business" },
+            { num: 69, name: "Approvals", desc: "Multi-level approval workflows for expenses, requests, and documents", cat: "business" },
+            { num: 70, name: "Vendor", desc: "Vendor and supplier management with procurement and purchase orders", cat: "business" },
+            { num: 71, name: "Assets", desc: "IT asset management and tracking with maintenance schedules", cat: "business" },
+            { num: 72, name: "Helpdesk", desc: "IT support ticketing system with SLA tracking and knowledge base", cat: "business" },
+            { num: 73, name: "Onboarding", desc: "Employee onboarding automation with checklists and documentation", cat: "business" },
+            { num: 74, name: "Training", desc: "Learning management system with courses, certifications, and progress tracking", cat: "business" },
+            { num: 75, name: "Goals", desc: "OKR and goal-setting platform with progress tracking and alignment", cat: "business" },
+            { num: 76, name: "Reviews", desc: "Performance review cycles with templates and calibration tools", cat: "business" },
+            { num: 77, name: "Attendance", desc: "Time and attendance tracking with leave management and scheduling", cat: "business" },
+            { num: 78, name: "Payroll", desc: "Payroll processing with tax calculations and compliance management", cat: "business" },
+            { num: 79, name: "Expenses", desc: "Expense reporting and reimbursement with receipt scanning and approvals", cat: "business" },
+            { num: 80, name: "Travel", desc: "Corporate travel booking and management with policy compliance", cat: "business" },
+            { num: 81, name: "Legal", desc: "Legal matter management with document templates and case tracking", cat: "business" },
+            { num: 82, name: "Compliance", desc: "Regulatory compliance tracking with policy management and attestations", cat: "business" },
+            { num: 83, name: "Insurance", desc: "Insurance policy management with claims tracking and renewals", cat: "business" },
+            { num: 84, name: "Facilities", desc: "Facility management with maintenance requests and space planning", cat: "business" },
+            { num: 85, name: "Security", desc: "Physical security management with access control and visitor tracking", cat: "business" },
+            { num: 86, name: "Analytics", desc: "Business intelligence platform with data visualization and custom reports", cat: "analytics" },
+            { num: 87, name: "Dashboards", desc: "Real-time dashboard builder with KPI tracking and metric alerts", cat: "analytics" },
+            { num: 88, name: "Insights", desc: "AI-powered insights and recommendations based on business data", cat: "analytics" },
+            { num: 89, name: "Forecast", desc: "Predictive analytics and forecasting for sales, revenue, and resources", cat: "analytics" },
+            { num: 90, name: "Data", desc: "Data warehouse and ETL tools for data integration and transformation", cat: "analytics" },
+            { num: 91, name: "BI", desc: "Self-service business intelligence with drag-and-drop report creation", cat: "analytics" },
+            { num: 92, name: "Metrics", desc: "Custom metrics tracking with goal setting and performance monitoring", cat: "analytics" },
+            { num: 93, name: "Alerts", desc: "Intelligent alerting system with anomaly detection and notifications", cat: "analytics" },
+            { num: 94, name: "Search", desc: "Enterprise search across all Metronique products and data sources", cat: "analytics" },
+            { num: 95, name: "Archive", desc: "Long-term data archival with compliance and retention policies", cat: "analytics" },
+            { num: 96, name: "Export", desc: "Data export and migration tools with multiple format support", cat: "analytics" },
+            { num: 97, name: "Sync", desc: "Data synchronization across systems with conflict resolution", cat: "analytics" },
+            { num: 98, name: "Backup", desc: "Automated backup and disaster recovery with point-in-time restoration", cat: "analytics" },
+            { num: 99, name: "Integrate", desc: "Integration platform with connectors for third-party applications", cat: "analytics" },
+            { num: 100, name: "Automate", desc: "Workflow automation builder with triggers, actions, and conditions", cat: "analytics" }
+        ];
+
+        const categories = {
+            project: { title: "Project Management", icon: "📋", count: 0 },
+            collaboration: { title: "Collaboration", icon: "💬", count: 0 },
+            development: { title: "Development", icon: "💻", count: 0 },
+            business: { title: "Business Ops", icon: "🏢", count: 0 },
+            analytics: { title: "Analytics", icon: "📊", count: 0 }
+        };
+
+        products.forEach(p => categories[p.cat].count++);
+
+        function renderProducts(filter = 'all', search = '') {
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = '';
+
+            const filteredProducts = products.filter(p => 
+                (filter === 'all' || p.cat === filter) &&
+                (search === '' || p.name.toLowerCase().includes(search.toLowerCase()) || 
+                 p.desc.toLowerCase().includes(search.toLowerCase()))
+            );
+
+            if (filter === 'all') {
+                Object.keys(categories).forEach(catKey => {
+                    const catProducts = filteredProducts.filter(p => p.cat === catKey);
+                    if (catProducts.length > 0) {
+                        renderCategory(catKey, catProducts, container);
+                    }
+                });
+            } else {
+                renderCategory(filter, filteredProducts, container);
+            }
+
+            if (filteredProducts.length === 0) {
+                container.innerHTML = '<p style="text-align:center;font-size:1.2rem;color:#666;padding:40px;">No products found</p>';
+            }
+        }
+
+        function renderCategory(catKey, products, container) {
+            const cat = categories[catKey];
+            const section = document.createElement('div');
+            section.className = 'category-section';
+            
+            section.innerHTML = `
+                <div class="category-header">
+                    <span class="category-icon">${cat.icon}</span>
+                    <h2 class="category-title">${cat.title}</h2>
+                    <span class="category-count">${products.length} products</span>
+                </div>
+                <div class="products-grid">
+                    ${products.map(p => `
+                        <div class="product-card">
+                            <div class="product-number">#${p.num}</div>
+                            <div class="product-name">Metronique ${p.name}</div>
+                            <div class="product-description">${p.desc}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.appendChild(section);
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const category = btn.dataset.category;
+                renderProducts(category, document.getElementById('searchInput').value);
+            });
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.category;
+            renderProducts(activeFilter, e.target.value);
+        });
+
+        renderProducts();
+    </script>
+</body>
+</html>
