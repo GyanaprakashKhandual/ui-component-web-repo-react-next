@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { positionClasses, calculatePosition } from '@/app/scripts/Tooltip.context';
@@ -5,7 +6,7 @@ import { positionClasses, calculatePosition } from '@/app/scripts/Tooltip.contex
 export const Tooltip = ({
   content = '',
   children,
-  position = 'top',
+  position = 'bottom',
   delay = 0,
   maxWidth = 200,
   className = ''
